@@ -10,68 +10,26 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
-body {
-  background-color: var(--bg-color);
-  color: var(--text-main);
-  overflow-x: hidden;
-  /* CRITICAL: Lock scrolling initially. We will unlock it via code when the intro finishes. */
-  overflow-y: hidden; 
-  overscroll-behavior: none;
-}
-
 .awwwards-experience { position: relative; width: 100vw; }
 
-/* --- LAYER 1: BACKGROUND TEXT --- */
-.background-typography {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  z-index: 1; 
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  padding: 5vh 0;
-  pointer-events: none;
-}
-
-.massive-bg-text {
-  font-family: var(--font-display);
-  font-size: 22vw; 
-  line-height: 0.75;
-  text-align: center;
-  letter-spacing: -2vw;
-  opacity: 0.15; /* Boosted opacity so it screams premium */
-  white-space: nowrap;
-  transform: scale(0.95); /* We will animate this scaling up during the drop */
-}
-
-.bottom-text.outline {
-  color: transparent;
-  -webkit-text-stroke: 1px rgba(255, 255, 255, 0.15);
-}
-
-/* --- LAYER 2: 3D CANVAS --- */
+/* --- LAYER 1: 3D CANVAS --- */
 .webgl-canvas {
   position: fixed;
   top: 0;
   left: 0;
   width: 100vw;
   height: 100vh;
-  z-index: 2; 
+  z-index: 1; 
   pointer-events: none;
-  /* THE MAGIC TRICK: This forces the black background of the Bloom VFX to become invisible, revealing Layer 1! */
-  mix-blend-mode: screen; 
+  /* No mix-blend-mode. Pure, solid WebGL rendering. */
 }
 
-/* --- LAYER 3: FOREGROUND UI --- */
+/* --- LAYER 2: FOREGROUND UI --- */
 .scroll-track {
   position: relative;
-  z-index: 3; 
+  z-index: 2; 
 }
 
-/* Group all foreground elements so we can hide them easily */
 .ui-reveal-layer {
   opacity: 0; /* HIDDEN UNTIL DRONE DROP FINISHES */
 }
