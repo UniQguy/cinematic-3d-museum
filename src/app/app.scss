@@ -1,0 +1,125 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;700&family=Manrope:wght@200;300;400;600&display=swap');
+
+:root {
+  --bg-color: #010a12; 
+  --accent: #44ffcc;
+  --text-main: #ffffff;
+  --font-display: 'Cinzel', serif;
+  --font-ui: 'Manrope', sans-serif;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  overflow-x: hidden;
+  /* CRITICAL: Lock scrolling initially. We will unlock it via code when the intro finishes. */
+  overflow-y: hidden; 
+  overscroll-behavior: none;
+}
+
+.awwwards-experience { position: relative; width: 100vw; }
+
+/* --- LAYER 1: BACKGROUND TEXT --- */
+.background-typography {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 1; 
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 5vh 0;
+  pointer-events: none;
+}
+
+.massive-bg-text {
+  font-family: var(--font-display);
+  font-size: 22vw; 
+  line-height: 0.75;
+  text-align: center;
+  letter-spacing: -2vw;
+  opacity: 0.15; /* Boosted opacity so it screams premium */
+  white-space: nowrap;
+  transform: scale(0.95); /* We will animate this scaling up during the drop */
+}
+
+.bottom-text.outline {
+  color: transparent;
+  -webkit-text-stroke: 1px rgba(255, 255, 255, 0.15);
+}
+
+/* --- LAYER 2: 3D CANVAS --- */
+.webgl-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 2; 
+  pointer-events: none;
+  /* THE MAGIC TRICK: This forces the black background of the Bloom VFX to become invisible, revealing Layer 1! */
+  mix-blend-mode: screen; 
+}
+
+/* --- LAYER 3: FOREGROUND UI --- */
+.scroll-track {
+  position: relative;
+  z-index: 3; 
+}
+
+/* Group all foreground elements so we can hide them easily */
+.ui-reveal-layer {
+  opacity: 0; /* HIDDEN UNTIL DRONE DROP FINISHES */
+}
+
+.editorial-nav {
+  position: fixed;
+  top: 0;
+  width: 100%;
+  padding: 2rem 4vw;
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 2px;
+}
+
+.status { color: var(--accent); font-weight: 400; }
+
+.scroll-section {
+  width: 100vw;
+  height: 150vh; 
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 10vw;
+  pointer-events: none; 
+}
+
+.content-block {
+  max-width: 500px;
+  pointer-events: auto;
+}
+
+.left-align { align-self: flex-start; }
+.right-align { align-self: flex-end; }
+
+.glass-panel {
+  background: rgba(1, 10, 18, 0.3);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-left: 1px solid rgba(68, 255, 204, 0.3);
+  padding: 3rem;
+}
+
+.overline { font-family: var(--font-ui); font-size: 0.65rem; letter-spacing: 4px; color: var(--accent); margin-bottom: 1rem; }
+.editorial-title { font-family: var(--font-display); font-size: clamp(3rem, 6vw, 6rem); line-height: 0.9; font-weight: 400; margin-bottom: 2rem; }
+.editorial-subtitle { font-family: var(--font-display); font-size: 2rem; font-weight: 400; font-style: italic; margin-bottom: 1rem; }
+.editorial-body { font-family: var(--font-ui); font-size: 1rem; font-weight: 200; line-height: 1.6; opacity: 0.7; margin-bottom: 2rem; }
+.data-points { display: flex; gap: 3rem; font-family: var(--font-ui); font-size: 0.9rem; font-weight: 400; }
+.data span { font-size: 0.6rem; color: var(--accent); letter-spacing: 2px; }
