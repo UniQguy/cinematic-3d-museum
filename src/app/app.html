@@ -22,7 +22,7 @@
 
   <div #canvasContainer class="webgl-canvas"></div>
 
-  <div class="scroll-track" #scrollTrack>
+  <div class="scroll-track" #scrollTrack [style.opacity]="isGalleryMode ? 0 : 1" [style.pointer-events]="isGalleryMode ? 'none' : 'auto'" style="transition: opacity 0.5s ease;">
     <div class="ui-reveal-layer">
       
       <nav class="editorial-nav">
@@ -36,6 +36,11 @@
               <span></span><span></span><span></span>
             </div>
           </button>
+
+          <div class="menu-btn archive-btn" (click)="toggleGallery()" style="cursor: pointer; margin-right: 2rem;">
+            ARCHIVES
+          </div>
+
           <div class="menu-btn" (click)="toggleMenu()" style="cursor: pointer;">EXPLORE</div>
         </div>
       </nav>
@@ -125,7 +130,9 @@
       </section>
 
     </div>
-  </div> <div class="menu-overlay" #menuOverlay>
+  </div> 
+
+  <div class="menu-overlay" #menuOverlay>
     <div class="menu-close-btn" (click)="toggleMenu()">[ CLOSE ]</div>
     
     <div class="menu-links">
@@ -152,5 +159,9 @@
       <p>EST. 2026 // PROF. NEHA SAMSIR</p>
     </div>
   </div>
+
+  @if (isGalleryMode) {
+    <app-gallery (closeGallery)="toggleGallery()"></app-gallery>
+  }
 
 </main>

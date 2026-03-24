@@ -1,57 +1,68 @@
-<div class="gallery-wrapper" (wheel)="onScroll($event)">
+<div class="gallery-wrapper">
   
-  <div #galleryCanvas class="webgl-canvas"></div>
+  <div #galleryCanvas class="webgl-gallery-canvas"></div>
 
   @if (isLoading) {
-    <div class="loading-overlay">
-      <div class="loader-content">
-        <div class="cyber-spinner"></div>
-        <p class="loading-text">DECRYPTING ARCHIVES... {{ loadingProgress }}%</p>
+    <div class="preloader-overlay">
+      <div class="preloader-content">
+        <p class="preloader-label">EXTRACTING ARCHIVES</p>
+        <div class="progress-container">
+          <span class="progress-number">{{ loadingProgress }}</span><span class="progress-percent">%</span>
+        </div>
+        <div class="progress-bar-container">
+          <div class="progress-bar" [style.width.%]="loadingProgress"></div>
+        </div>
       </div>
     </div>
   }
 
-  <div class="holo-ui-layer" [class.visible]="!isLoading">
+  <div class="gallery-ui-layer" [class.visible]="!isLoading">
     
-    <header class="gallery-header">
-      <div class="brand">ABYSSAL ARCHIVES</div>
-      <button class="back-btn" (click)="goBack()">[ RETURN TO SURFACE ]</button>
-    </header>
-
-    <div class="scroll-indicator">
-      <div class="mouse">
-        <div class="wheel"></div>
+    <nav class="editorial-nav">
+      <div class="brand">MUSEUM ARCHIVES</div>
+      <div class="status">ISOMETRIC FEED • ACTIVE</div>
+      
+      <div class="nav-controls">
+        <div class="menu-btn archive-btn" (click)="returnToSurface()">
+          [ RETURN TO EXPEDITION ]
+        </div>
       </div>
-      <span>SCROLL TO BROWSE</span>
+    </nav>
+
+    <div class="gallery-virtual-scroll-helper">
+      <span class="helper-text">[ SCROLL ] NEXT ITEM</span>
+      <div class="helper-line"></div>
     </div>
 
-    <div class="data-panel" #dataPanel>
-      <div class="panel-header">
-        <span class="item-id">ARTIFACT // {{ currentItem.id }}</span>
+    <div class="holographic-data-overlay" #holographicData>
+      
+      <div class="holo-panel holo-title-panel">
+        <span class="item-number">{{ currentItem.num }}</span>
         <h1 class="item-title">{{ currentItem.title }}</h1>
-        <div class="scan-line"></div>
+        <div class="holo-line top-line"></div>
       </div>
       
-      <div class="panel-specs">
-        <div class="spec-box">
-          <span class="spec-label">ORIGIN</span>
-          <span class="spec-value">{{ currentItem.origin }}</span>
+      <div class="holo-panel holo-specs-panel">
+        <div class="spec">
+          <span>ORIGIN</span><br>
+          <span class="value">{{ currentItem.origin }}</span>
         </div>
-        <div class="spec-box">
-          <span class="spec-label">ERA</span>
-          <span class="spec-value">{{ currentItem.era }}</span>
+        <div class="spec delayed-holo-entry">
+          <span>EST. ERA</span><br>
+          <span class="value">{{ currentItem.era }}</span>
         </div>
-        <div class="spec-box">
-          <span class="spec-label">STATUS</span>
-          <span class="spec-value highlight">{{ currentItem.status }}</span>
+        <div class="spec delayed-holo-entry">
+          <span>CLASSIFICATION</span><br>
+          <span class="value holo-glowing-text">{{ currentItem.classification }}</span>
         </div>
+        <div class="holo-line"></div>
+      </div>
+      
+      <div class="holo-panel holo-narrative-panel glass-panel">
+        <p class="holo-body">{{ currentItem.body }}</p>
+        <div class="holo-line bottom-line"></div>
       </div>
 
-      <div class="panel-description glass-effect">
-        <p>{{ currentItem.description }}</p>
-        <div class="corner-tl"></div>
-        <div class="corner-br"></div>
-      </div>
     </div>
 
   </div>

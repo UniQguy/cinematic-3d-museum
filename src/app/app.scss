@@ -10,9 +10,15 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
+body {
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  overflow-x: hidden;
+}
+
 .awwwards-experience { position: relative; width: 100vw; }
 
-/* --- LAYER 1: 3D CANVAS --- */
+/* --- LAYER 1: MAIN 3D CANVAS (Expedition) --- */
 .webgl-canvas {
   position: fixed;
   top: 0;
@@ -23,33 +29,45 @@
   pointer-events: none;
 }
 
-/* --- LAYER 2: FOREGROUND UI --- */
+/* --- LAYER 2: FOREGROUND UI (Expedition) --- */
 .scroll-track {
   position: relative;
   z-index: 2; 
+  transition: opacity 0.5s ease;
+}
+
+/* Hides Expedition UI when Gallery is active */
+.scroll-track.gallery-mode-active {
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
 }
 
 .ui-reveal-layer {
   opacity: 0; 
 }
 
+/* --- NAVIGATION BAR --- */
 .editorial-nav {
   position: fixed;
   top: 0;
+  left: 0;
   width: 100%;
   padding: 2rem 4vw;
   display: flex;
   justify-content: space-between;
+  align-items: center;
   font-family: var(--font-ui);
   font-size: 0.7rem;
   font-weight: 600;
   letter-spacing: 2px;
-  z-index: 50; /* Ensure nav is above other elements */
+  z-index: 9990; /* Must stay on top of everything */
+  pointer-events: auto;
 }
 
-.status { color: var(--accent); font-weight: 400; }
+.brand { text-shadow: 0 0 10px rgba(255,255,255,0.3); }
+.status { color: var(--accent); font-weight: 400; opacity: 0.8; }
 
-/* --- NAV CONTROLS & SOUND TOGGLE --- */
 .nav-controls {
   display: flex;
   align-items: center;
@@ -61,7 +79,7 @@
   border: none;
   color: var(--text-main);
   font-family: var(--font-ui);
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   letter-spacing: 2px;
   cursor: pointer;
   display: flex;
@@ -70,9 +88,7 @@
   opacity: 0.7;
   transition: opacity 0.3s ease;
 
-  &:hover {
-    opacity: 1;
-  }
+  &:hover { opacity: 1; }
 }
 
 .sound-bars {
@@ -85,14 +101,11 @@
     display: block;
     width: 2px;
     background-color: var(--accent);
-    height: 2px; /* Default muted state */
+    height: 2px; 
     transition: height 0.2s ease;
   }
 
-  &.playing span {
-    animation: soundBounce 1s infinite alternate ease-in-out;
-  }
-
+  &.playing span { animation: soundBounce 1s infinite alternate ease-in-out; }
   &.playing span:nth-child(1) { animation-delay: 0.0s; }
   &.playing span:nth-child(2) { animation-delay: 0.3s; }
   &.playing span:nth-child(3) { animation-delay: 0.6s; }
@@ -103,10 +116,20 @@
   100% { height: 10px; box-shadow: 0 0 5px var(--accent); }
 }
 
+.menu-btn {
+  color: #fff;
+  transition: color 0.3s ease;
+  &:hover { color: #ffcc44; }
+}
 
+.archive-btn {
+  color: var(--accent);
+}
+
+/* --- SCROLL SECTIONS (Expedition) --- */
 .scroll-section {
   width: 100vw;
-  height: 200vh; /* Replaces the need for multiple empty sections */
+  height: 200vh;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -114,21 +137,17 @@
   pointer-events: none; 
 }
 
-.content-block {
-  max-width: 500px;
-  pointer-events: auto;
-}
-
+.content-block { max-width: 500px; pointer-events: auto; }
 .left-align { align-self: flex-start; }
 .right-align { align-self: flex-end; }
 
 .glass-panel {
-  background: rgba(1, 10, 18, 0.3);
+  background: rgba(1, 10, 18, 0.4);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-left: 1px solid rgba(68, 255, 204, 0.3);
   padding: 3rem;
-  margin-top: 1.5rem; /* Separates the glass panel from the title in Stage 1 */
+  margin-top: 1.5rem; 
 }
 
 .overline { font-family: var(--font-ui); font-size: 0.65rem; letter-spacing: 4px; color: var(--accent); margin-bottom: 1rem; }
@@ -138,10 +157,7 @@
 .data-points { display: flex; gap: 3rem; font-family: var(--font-ui); font-size: 0.9rem; font-weight: 400; }
 .data span { font-size: 0.6rem; color: var(--accent); letter-spacing: 2px; }
 
-.delayed-text {
-  opacity: 0;
-  transform: translateY(30px);
-}
+.delayed-text { opacity: 0; transform: translateY(30px); }
 
 /* --- CINEMATIC PRELOADER --- */
 .preloader-overlay {
@@ -150,7 +166,7 @@
   left: 0;
   width: 100vw;
   height: 100vh;
-  background-color: #010a12;
+  background-color: var(--bg-color);
   z-index: 9999;
   display: flex;
   flex-direction: column;
@@ -160,56 +176,13 @@
   font-family: var(--font-ui);
 }
 
-.preloader-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 300px;
-}
-
-.preloader-label {
-  font-size: 0.7rem;
-  letter-spacing: 6px;
-  color: var(--accent);
-  margin-bottom: 2rem;
-  opacity: 0.8;
-  animation: pulse 2s infinite ease-in-out;
-}
-
-.progress-container {
-  display: flex;
-  align-items: baseline;
-  margin-bottom: 1rem;
-}
-
-.progress-number {
-  font-family: var(--font-display);
-  font-size: 4rem;
-  line-height: 1;
-}
-
-.progress-percent {
-  font-size: 1.5rem;
-  margin-left: 5px;
-  color: var(--accent);
-}
-
-.progress-bar-container {
-  width: 100%;
-  height: 2px;
-  background: rgba(255, 255, 255, 0.1);
-  position: relative;
-  overflow: hidden;
-  margin-bottom: 3rem;
-}
-
-.progress-bar {
-  height: 100%;
-  background: var(--accent);
-  width: 0%;
-  transition: width 0.3s ease;
-  box-shadow: 0 0 10px var(--accent);
-}
+.preloader-content { display: flex; flex-direction: column; align-items: center; width: 300px; }
+.preloader-label { font-size: 0.7rem; letter-spacing: 6px; color: var(--accent); margin-bottom: 2rem; opacity: 0.8; animation: pulse 2s infinite ease-in-out; }
+.progress-container { display: flex; align-items: baseline; margin-bottom: 1rem; }
+.progress-number { font-family: var(--font-display); font-size: 4rem; line-height: 1; text-shadow: 0 0 15px rgba(255, 255, 255, 0.2); }
+.progress-percent { font-size: 1.5rem; margin-left: 5px; color: var(--accent); }
+.progress-bar-container { width: 100%; height: 2px; background: rgba(255, 255, 255, 0.1); position: relative; overflow: hidden; margin-bottom: 3rem; }
+.progress-bar { height: 100%; background: var(--accent); width: 0%; transition: width 0.3s ease; box-shadow: 0 0 10px var(--accent); }
 
 .enter-btn {
   background: transparent;
@@ -223,23 +196,20 @@
   opacity: 0;
   transform: translateY(20px);
   pointer-events: none;
-  transition: all 0.5s ease;
+  transition: all 0.4s ease;
 
   &:hover {
     background: rgba(68, 255, 204, 0.1);
     box-shadow: 0 0 20px rgba(68, 255, 204, 0.2);
     border-color: var(--accent);
+    color: #fff;
   }
 
-  &.visible {
-    opacity: 1;
-    transform: translateY(0);
-    pointer-events: auto;
-  }
+  &.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 0.5; }
+  0%, 100% { opacity: 0.4; }
   50% { opacity: 1; }
 }
 
@@ -255,50 +225,202 @@
   gap: 1.5rem;
   z-index: 100;
   pointer-events: none;
+  transition: opacity 0.5s ease;
 }
 
-.hud-line-container {
-  width: 2px;
-  height: 100%;
-  background: rgba(255, 255, 255, 0.1);
-  position: relative;
-  overflow: hidden;
+.hud-line-container { width: 2px; height: 100%; background: rgba(255, 255, 255, 0.1); position: relative; overflow: hidden; }
+.hud-progress-line { position: absolute; top: 0; left: 0; width: 100%; height: 0%; background: var(--accent); box-shadow: 0 0 10px var(--accent); }
+.hud-data { display: flex; flex-direction: column; gap: 0.2rem; }
+.hud-label { font-family: var(--font-ui); font-size: 0.6rem; letter-spacing: 4px; color: rgba(255, 255, 255, 0.5); writing-mode: vertical-rl; transform: rotate(180deg); margin-bottom: 1rem; }
+.hud-value { font-family: var(--font-display); font-size: 1.2rem; color: #fff; writing-mode: vertical-rl; transform: rotate(180deg); text-shadow: 0 0 10px rgba(255, 255, 255, 0.5); }
+
+
+/* ========================================================================= */
+/* --- NEW: GALLERY ROOM OVERLAY STYLES --- */
+/* ========================================================================= */
+
+.gallery-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: var(--bg-color); /* Solid dark background */
+  z-index: 8000; /* Below Nav, Above Expedition */
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.8s;
+  pointer-events: none;
 }
 
-.hud-progress-line {
+.gallery-overlay.active {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto; /* Allow interaction when active */
+}
+
+/* Canvas for the Isometric Gallery Scene */
+.webgl-gallery-canvas {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
-  height: 0%;
-  background: var(--accent); /* Uses your cyan/gold accent */
-  box-shadow: 0 0 10px var(--accent);
+  height: 100%;
+  pointer-events: none; /* Let clicks pass to UI if needed */
 }
 
-.hud-data {
+/* Scroll Helper in Gallery */
+.gallery-virtual-scroll-helper {
+  position: absolute;
+  bottom: 5vh;
+  right: 5vw;
+  font-family: var(--font-ui);
+  color: var(--accent);
+  font-size: 0.55rem;
+  letter-spacing: 4px;
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  align-items: center;
+  gap: 1.5rem;
+  z-index: 8010;
+  opacity: 0; /* Animated in by GSAP */
+  
+  .helper-text { 
+    writing-mode: vertical-rl; 
+    transform: rotate(180deg); 
+    opacity: 0.6; 
+  }
+  .helper-line { 
+    width: 1px; 
+    height: 60px; 
+    background: linear-gradient(to bottom, var(--accent), transparent); 
+    opacity: 0.5; 
+  }
 }
 
-.hud-label {
+/* Holographic Data Overlay */
+.holographic-data-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  padding: 15vh 8vw;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 3vh;
+  pointer-events: none; /* Crucial: Let scroll events pass through */
+  z-index: 8050;
+}
+
+.holo-panel {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  width: fit-content;
+  
+  .holo-line {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 0%; /* Start at 0 for GSAP animation */
+    height: 1px;
+    background: var(--accent);
+    opacity: 0.4;
+    box-shadow: 0 0 8px var(--accent);
+    
+    &.bottom-line { 
+      top: auto; 
+      bottom: 0; 
+    }
+  }
+}
+
+/* Specific Panel Styles */
+.holo-title-panel {
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 1.5rem;
+  margin-bottom: 2vh;
+  padding-bottom: 1.5rem;
+
+  .item-number {
+    font-family: var(--font-ui);
+    font-size: 1.2rem;
+    font-weight: 300;
+    color: var(--accent);
+    letter-spacing: 4px;
+    opacity: 0.8;
+  }
+
+  .item-title {
+    font-family: var(--font-display);
+    font-size: clamp(2.5rem, 5vw, 5rem);
+    text-transform: uppercase;
+    color: transparent;
+    -webkit-text-stroke: 1px rgba(255, 255, 255, 0.6);
+    line-height: 1;
+    margin: 0;
+  }
+}
+
+.holo-specs-panel {
+  display: flex;
+  flex-direction: row;
+  gap: 4rem;
   font-family: var(--font-ui);
-  font-size: 0.6rem;
-  letter-spacing: 4px;
-  color: rgba(255, 255, 255, 0.5);
-  writing-mode: vertical-rl;
-  transform: rotate(180deg);
-  margin-bottom: 1rem;
+  text-transform: uppercase;
+  padding: 1.5rem 0;
+
+  .spec {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    
+    span:first-child { 
+      font-size: 0.55rem; 
+      color: rgba(255, 255, 255, 0.4); 
+      letter-spacing: 3px; 
+    }
+    
+    .value { 
+      font-size: 1rem; 
+      color: #fff; 
+      font-weight: 300; 
+      letter-spacing: 1px; 
+    }
+    
+    .holo-glowing-text {
+      color: var(--accent);
+      text-shadow: 0 0 10px rgba(68, 255, 204, 0.5);
+    }
+  }
 }
 
-.hud-value {
-  font-family: var(--font-display);
-  font-size: 1.2rem;
-  color: #fff;
-  writing-mode: vertical-rl;
-  transform: rotate(180deg);
-  text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+.holo-narrative-panel {
+  max-width: 450px;
+  background: rgba(1, 10, 18, 0.5);
+  border-left: 2px solid rgba(68, 255, 204, 0.3);
+  padding: 2.5rem 2rem;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+
+  .holo-body {
+    font-family: var(--font-ui);
+    font-size: 0.85rem;
+    font-weight: 300;
+    line-height: 1.8;
+    color: rgba(255, 255, 255, 0.7);
+    margin: 0;
+  }
 }
+
+.delayed-holo-entry {
+  opacity: 0;
+}
+
 
 /* --- FULL SCREEN MENU OVERLAY --- */
 .menu-overlay {
@@ -307,26 +429,27 @@
   left: 0;
   width: 100vw;
   height: 100vh;
-  background: rgba(1, 10, 18, 0.85);
+  background: rgba(1, 10, 18, 0.95);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  z-index: 9000;
+  z-index: 9999;
   display: flex;
   flex-direction: column;
   justify-content: center;
   padding: 0 10vw;
-  opacity: 0; /* Hidden by default */
-  pointer-events: none; /* Can't click when hidden */
-  transform: translateY(-100%); /* Start off-screen */
+  opacity: 0; 
+  pointer-events: none; 
+  transform: translateY(-100%); 
 }
 
 .menu-close-btn {
   position: absolute;
-  top: 2rem;
+  top: 2.5rem;
   right: 4vw;
   font-family: var(--font-ui);
-  color: var(--accent);
-  font-size: 0.8rem;
+  color: #ffcc44; /* Gold accent for menu close */
+  font-size: 0.7rem;
+  font-weight: 600;
   letter-spacing: 4px;
   cursor: pointer;
   transition: opacity 0.3s ease;
@@ -344,13 +467,13 @@
   align-items: baseline;
   gap: 2rem;
   cursor: pointer;
-  overflow: hidden; /* Required for the slide-up text reveal animation */
+  overflow: hidden; 
   
   .menu-num {
     font-family: var(--font-ui);
     color: var(--accent);
     font-size: 1rem;
-    opacity: 0.5;
+    opacity: 0.3;
     transition: opacity 0.3s ease;
   }
   
@@ -358,9 +481,9 @@
     font-family: var(--font-display);
     font-size: clamp(3rem, 6vw, 6rem);
     color: transparent;
-    -webkit-text-stroke: 1px rgba(255, 255, 255, 0.4);
+    -webkit-text-stroke: 1px rgba(255, 255, 255, 0.3);
     transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-    transform: translateY(100%); /* Start hidden so GSAP can slide it up */
+    transform: translateY(100%); 
   }
 
   &:hover {
@@ -368,8 +491,8 @@
     .menu-text {
       color: #fff;
       -webkit-text-stroke: 1px transparent;
-      text-shadow: 0 0 30px rgba(255, 255, 255, 0.3);
-      transform: translateX(20px); /* Slight slide to the right on hover */
+      text-shadow: 0 0 30px rgba(255, 255, 255, 0.2);
+      transform: translateX(20px); 
     }
   }
 }
@@ -382,7 +505,7 @@
   display: flex;
   justify-content: space-between;
   font-family: var(--font-ui);
-  font-size: 0.6rem;
+  font-size: 0.55rem;
   color: rgba(255, 255, 255, 0.3);
   letter-spacing: 3px;
 }
