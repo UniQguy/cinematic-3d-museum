@@ -1,4 +1,5 @@
 import { Component, ElementRef, ViewChild, AfterViewInit, OnDestroy, HostListener, ChangeDetectorRef } from '@angular/core';
+import { CommonModule } from '@angular/common'; // Needed for *ngIf / @if
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { gsap } from 'gsap';
@@ -7,37 +8,40 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 
+// IMPORT THE GALLERY COMPONENT
+import { GalleryComponent } from './gallery/gallery.component'; // Ensure path is correct
+
 gsap.registerPlugin(ScrollTrigger);
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [],
+  // ADD GalleryComponent and CommonModule to imports
+  imports: [CommonModule, GalleryComponent],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
 export class App implements AfterViewInit, OnDestroy {
-  @ViewChild('canvasContainer', { static: true }) canvasContainer!: ElementRef<HTMLDivElement>;
-  @ViewChild('scrollTrack', { static: true }) scrollTrack!: ElementRef<HTMLDivElement>;
+  // --- VIEW STATE MANAGEMENT ---
+  public isGalleryViewActive: boolean = false;
+
+  @ViewChild('canvasContainer', { static: false }) canvasContainer?: ElementRef<HTMLDivElement>;
+  @ViewChild('scrollTrack', { static: false }) scrollTrack?: ElementRef<HTMLDivElement>;
   
   // Preloader Element Reference
-  @ViewChild('preloaderOverlay', { static: true }) preloaderOverlay!: ElementRef<HTMLDivElement>;
+  @ViewChild('preloaderOverlay', { static: false }) preloaderOverlay?: ElementRef<HTMLDivElement>;
 
   // HUD Depth Tracker References
-  @ViewChild('depthValue', { static: false }) depthValue!: ElementRef<HTMLSpanElement>;
-  @ViewChild('depthIndicator', { static: false }) depthIndicator!: ElementRef<HTMLDivElement>;
-
-  // MENU REFERENCE
-  @ViewChild('menuOverlay', { static: false }) menuOverlay!: ElementRef<HTMLDivElement>;
+  @ViewChild('depthValue', { static: false }) depthValue?: ElementRef<HTMLSpanElement>;
+  @ViewChild('depthIndicator', { static: false }) depthIndicator?: ElementRef<HTMLDivElement>;
 
   // AUDIO REFERENCE
-  @ViewChild('bgMusic', { static: false }) bgMusic!: ElementRef<HTMLAudioElement>;
+  @ViewChild('bgMusic', { static: false }) bgMusic?: ElementRef<HTMLAudioElement>;
 
   // State variables for UI
   public loadingProgress: number = 0;
   public isLoaded: boolean = false;
   public isMuted: boolean = false; // Audio starts unmuted
-  public isMenuOpen: boolean = false;
 
   private renderer!: THREE.WebGLRenderer;
   private composer!: EffectComposer; 
@@ -65,12 +69,56 @@ export class App implements AfterViewInit, OnDestroy {
   constructor(private cdr: ChangeDetectorRef) {}
 
   ngAfterViewInit(): void {
-    // Initial scroll lock until user clicks Enter
-    document.body.style.overflowY = 'hidden'; 
-    this.initThreeJsScene();
+    // Only init if we are in the main view
+    if (!this.isGalleryViewActive) {
+       this.initMainView();
+    }
   }
 
+  // Helper function to re-init when returning from gallery
+  private initMainView() {
+    document.body.style.overflowY = 'hidden'; 
+    // Small delay to ensure DOM elements are available after *ngIf rendering
+    setTimeout(() => {
+        if(this.canvasContainer) {
+            this.initThreeJsScene();
+        }
+    }, 0);
+  }
+
+  // --- NEW: VIEW SWITCHING METHODS ---
+  public openGallery(): void {
+    console.log("Opening Gallery View...");
+    // 1. Fade out current view (optional GSAP animation here before switching)
+    gsap.to('.awwwards-experience', { opacity: 0, duration: 0.5, onComplete: () => {
+        // 2. Clean up current Three.js scene to free memory
+        this.cleanupThreeJs();
+        // 3. Switch state
+        this.isGalleryViewActive = true;
+        this.cdr.detectChanges();
+    }});
+  }
+
+  public closeGallery(): void {
+    console.log("Closing Gallery View, returning to Expedition...");
+    // State is changed back by an event from the child component
+    this.isGalleryViewActive = false;
+    this.cdr.detectChanges();
+    
+    // Re-initialize the main scene
+    this.isLoaded = false; // Reset loading state
+    this.loadingProgress = 0;
+    this.initMainView();
+    
+    // Fade back in
+    setTimeout(()=> {
+        gsap.fromTo('.awwwards-experience', {opacity: 0}, {opacity: 1, duration: 0.5});
+    }, 100);
+  }
+
+
   private async initThreeJsScene(): Promise<void> {
+    if(!this.canvasContainer) return;
     const container = this.canvasContainer.nativeElement;
 
     this.scene = new THREE.Scene();
@@ -131,11 +179,10 @@ export class App implements AfterViewInit, OnDestroy {
     
     loadingManager.onProgress = (url, itemsLoaded, itemsTotal) => {
       this.loadingProgress = Math.floor((itemsLoaded / itemsTotal) * 100);
-      this.cdr.detectChanges(); // Force Angular to update the HTML text immediately
+      this.cdr.detectChanges(); 
     };
 
     loadingManager.onLoad = () => {
-      // Small delay to let user see 100% before button pops up
       setTimeout(() => {
         this.isLoaded = true;
         this.cdr.detectChanges();
@@ -267,6 +314,14 @@ export class App implements AfterViewInit, OnDestroy {
       this.artifact5Model.userData = { baseY: this.artifact5Model.position.y, phase: Math.random() * Math.PI };
       this.scene.add(this.artifact5Model);
 
+      this.neonLight1 = new THREE.PointLight(0xff0044, 200, 20); 
+      this.neonLight1.position.set(-8, 12, -345);
+      this.scene.add(this.neonLight1);
+
+      this.neonLight2 = new THREE.PointLight(0x00aaff, 200, 20); 
+      this.neonLight2.position.set(8, 12, -345);
+      this.scene.add(this.neonLight2);
+
       const rayColors = [0xffaa44, 0xffcc88, 0xffaa44];
       rayColors.forEach((color, index) => {
           const ray = new THREE.SpotLight(color, 600); 
@@ -299,42 +354,6 @@ export class App implements AfterViewInit, OnDestroy {
   }
 
   // ========================================================
-  // MENU OVERLAY LOGIC
-  // ========================================================
-  public toggleMenu(): void {
-    if (!this.menuOverlay) return;
-
-    this.isMenuOpen = !this.isMenuOpen;
-    const menuEl = this.menuOverlay.nativeElement;
-    const menuTexts = menuEl.querySelectorAll('.menu-text');
-
-    if (this.isMenuOpen) {
-      // Animate Menu IN
-      gsap.to(menuEl, { opacity: 1, y: 0, duration: 0.8, ease: "power3.inOut", pointerEvents: "auto" });
-      
-      // Stagger animate links sliding UP
-      gsap.to(menuTexts, { 
-        y: 0, 
-        duration: 0.8, 
-        stagger: 0.1, 
-        ease: "power3.out", 
-        delay: 0.4 
-      });
-      
-      // Optional: Pause background audio slightly
-      if (this.bgMusic && !this.isMuted) gsap.to(this.bgMusic.nativeElement, { volume: 0.1, duration: 0.5 });
-
-    } else {
-      // Animate Menu OUT
-      gsap.to(menuTexts, { y: '100%', duration: 0.4, ease: "power2.in" });
-      gsap.to(menuEl, { opacity: 0, y: '-100%', duration: 0.8, ease: "power3.inOut", delay: 0.2, pointerEvents: "none" });
-      
-      // Restore volume
-      if (this.bgMusic && !this.isMuted) gsap.to(this.bgMusic.nativeElement, { volume: 0.4, duration: 0.5, delay: 0.5 });
-    }
-  }
-
-  // ========================================================
   // TRIGGERED WHEN USER CLICKS "ENTER EXPEDITION"
   // ========================================================
   public startExperience(): void {
@@ -343,14 +362,16 @@ export class App implements AfterViewInit, OnDestroy {
         this.bgMusic.nativeElement.play().catch(e => console.log("Audio play blocked", e));
     }
 
-    gsap.to(this.preloaderOverlay.nativeElement, {
-        opacity: 0,
-        duration: 1.5,
-        ease: "power2.inOut",
-        onComplete: () => {
-            this.preloaderOverlay.nativeElement.style.display = 'none';
-        }
-    });
+    if(this.preloaderOverlay) {
+        gsap.to(this.preloaderOverlay.nativeElement, {
+            opacity: 0,
+            duration: 1.5,
+            ease: "power2.inOut",
+            onComplete: () => {
+                this.preloaderOverlay.nativeElement.style.display = 'none';
+            }
+        });
+    }
 
     this.playCinematicIntro();
   }
@@ -392,12 +413,14 @@ export class App implements AfterViewInit, OnDestroy {
   }
 
   private setupScrollAnimation(): void {
+    if(!this.scrollTrack) return;
+    
     const sections = document.querySelectorAll('.scroll-section');
     const delayedTexts = document.querySelectorAll('.delayed-text');
 
     if (delayedTexts.length > 0) gsap.set(delayedTexts, { opacity: 0, y: 80 });
 
-    const tl = gsap.timeline({ 
+    this.expeditionTl = gsap.timeline({ 
         scrollTrigger: { 
             trigger: this.scrollTrack.nativeElement, 
             start: "top top", 
@@ -416,48 +439,48 @@ export class App implements AfterViewInit, OnDestroy {
     });
 
     const introText = sections[0]?.querySelector('.content-block');
-    if (introText) tl.to(introText, { opacity: 0, y: -50, duration: 0.5 }, 0);
-    if (this.bgTextMesh) tl.to(this.bgTextMesh.position, { y: 25, duration: 1 }, 0);
+    if (introText) this.expeditionTl.to(introText, { opacity: 0, y: -50, duration: 0.5 }, 0);
+    if (this.bgTextMesh) this.expeditionTl.to(this.bgTextMesh.position, { y: 25, duration: 1 }, 0);
 
-    tl.to(this.camera.position, { x: 8, y: -2, z: -55, ease: "power1.inOut", duration: 1 }, 0)
+    this.expeditionTl.to(this.camera.position, { x: 8, y: -2, z: -55, ease: "power1.inOut", duration: 1 }, 0)
       .to(this.cameraTarget, { x: 14, y: -4, z: -65, ease: "power1.inOut", duration: 1 }, 0);
     if (delayedTexts[0]) {
-        tl.fromTo(delayedTexts[0], { opacity: 0, y: 50 }, { opacity: 1, y: 0, ease: "power2.out", duration: 0.4 }, 0.6)
+        this.expeditionTl.fromTo(delayedTexts[0], { opacity: 0, y: 50 }, { opacity: 1, y: 0, ease: "power2.out", duration: 0.4 }, 0.6)
           .to(delayedTexts[0], { opacity: 0, y: -50, ease: "power2.in", duration: 0.3 }, 1.2);
     }
 
-    tl.to(this.camera.position, { x: -8, y: -1, z: -120, ease: "power1.inOut", duration: 1 }, 1)
+    this.expeditionTl.to(this.camera.position, { x: -8, y: -1, z: -120, ease: "power1.inOut", duration: 1 }, 1)
       .to(this.cameraTarget, { x: -16, y: -2, z: -130, ease: "power1.inOut", duration: 1 }, 1);
     if (delayedTexts[1]) {
-        tl.fromTo(delayedTexts[1], { opacity: 0, y: 50 }, { opacity: 1, y: 0, ease: "power2.out", duration: 0.4 }, 1.6)
+        this.expeditionTl.fromTo(delayedTexts[1], { opacity: 0, y: 50 }, { opacity: 1, y: 0, ease: "power2.out", duration: 0.4 }, 1.6)
           .to(delayedTexts[1], { opacity: 0, y: -50, ease: "power2.in", duration: 0.3 }, 2.2);
     }
 
-    tl.to(this.camera.position, { x: 8, y: -2, z: -185, ease: "power1.inOut", duration: 1 }, 2)
+    this.expeditionTl.to(this.camera.position, { x: 8, y: -2, z: -185, ease: "power1.inOut", duration: 1 }, 2)
       .to(this.cameraTarget, { x: -14, y: 0, z: -195, ease: "power1.inOut", duration: 1 }, 2);
     if (delayedTexts[2]) {
-        tl.fromTo(delayedTexts[2], { opacity: 0, y: 50 }, { opacity: 1, y: 0, ease: "power2.out", duration: 0.4 }, 2.6)
+        this.expeditionTl.fromTo(delayedTexts[2], { opacity: 0, y: 50 }, { opacity: 1, y: 0, ease: "power2.out", duration: 0.4 }, 2.6)
           .to(delayedTexts[2], { opacity: 0, y: -50, ease: "power2.in", duration: 0.3 }, 3.2);
     }
 
-    tl.to(this.camera.position, { x: 15, y: 15, z: -250, ease: "power1.in", duration: 0.5 }, 3)
+    this.expeditionTl.to(this.camera.position, { x: 15, y: 15, z: -250, ease: "power1.in", duration: 0.5 }, 3)
       .to(this.cameraTarget, { x: 0, y: -15, z: -260, ease: "power1.in", duration: 0.5 }, 3)
       .to(this.camera.position, { x: -15, y: 10, z: -265, ease: "power1.out", duration: 0.5 }, 3.5)
       .to(this.cameraTarget, { x: 0, y: -15, z: -260, ease: "power1.out", duration: 0.5 }, 3.5);
     if (delayedTexts[3]) {
-        tl.fromTo(delayedTexts[3], { opacity: 0, y: 50 }, { opacity: 1, y: 0, ease: "power2.out", duration: 0.4 }, 3.6)
+        this.expeditionTl.fromTo(delayedTexts[3], { opacity: 0, y: 50 }, { opacity: 1, y: 0, ease: "power2.out", duration: 0.4 }, 3.6)
           .to(delayedTexts[3], { opacity: 0, y: -50, ease: "power2.in", duration: 0.3 }, 4.2);
     }
 
-    tl.to(this.camera.position, { x: 20, y: -5, z: -320, ease: "power1.inOut", duration: 0.4 }, 4)
+    this.expeditionTl.to(this.camera.position, { x: 20, y: -5, z: -320, ease: "power1.inOut", duration: 0.4 }, 4)
       .to(this.cameraTarget, { x: 0, y: -10, z: -350, ease: "power1.inOut", duration: 0.4 }, 4);
-    tl.to(this.camera.position, { x: 0, y: -5, z: -335, ease: "none", duration: 0.3 }, 4.4)
+    this.expeditionTl.to(this.camera.position, { x: 0, y: -5, z: -335, ease: "none", duration: 0.3 }, 4.4)
       .to(this.cameraTarget, { x: 0, y: -5, z: -350, ease: "none", duration: 0.3 }, 4.4);
-    tl.to(this.camera.position, { x: 0, y: 10, z: -380, ease: "power2.out", duration: 0.3 }, 4.7)
+    this.expeditionTl.to(this.camera.position, { x: 0, y: 10, z: -380, ease: "power2.out", duration: 0.3 }, 4.7)
       .to(this.cameraTarget, { x: 0, y: 20, z: -450, ease: "power2.out", duration: 0.3 }, 4.7);
 
     if (delayedTexts[4]) {
-        tl.fromTo(delayedTexts[4], 
+        this.expeditionTl.fromTo(delayedTexts[4], 
             { opacity: 0, scale: 0.1, y: 150 }, 
             { opacity: 1, scale: 1, y: 0, ease: "power2.out", duration: 0.3 }, 
             4.7
@@ -468,74 +491,106 @@ export class App implements AfterViewInit, OnDestroy {
   private startAnimationLoop = (): void => {
     this.animationFrameId = requestAnimationFrame(this.startAnimationLoop);
     const time = Date.now() * 0.001;
-    this.camera.lookAt(this.cameraTarget);
+    
+    // Choose which camera and scene to render based on mode
+    if(!this.isGalleryMode) {
+        this.camera.lookAt(this.cameraTarget);
 
-    if (this.particles) {
-        const pos = this.particles.geometry.attributes['position'].array as Float32Array;
-        const phases = this.particles.geometry.attributes['aPhase'].array as Float32Array;
-        for(let i = 0; i < pos.length / 3; i++) {
-            const i3 = i * 3;
-            pos[i3 + 1] += 0.08; 
-            pos[i3] += Math.sin(time * 1.5 + phases[i]) * 0.03;
-            pos[i3 + 2] += Math.cos(time * 1.5 + phases[i]) * 0.03;
-            if (pos[i3 + 1] > 40) pos[i3 + 1] = -40; 
+        if (this.particles) {
+            const pos = this.particles.geometry.attributes['position'].array as Float32Array;
+            const phases = this.particles.geometry.attributes['aPhase'].array as Float32Array;
+            for(let i = 0; i < pos.length / 3; i++) {
+                const i3 = i * 3;
+                pos[i3 + 1] += 0.08; 
+                pos[i3] += Math.sin(time * 1.5 + phases[i]) * 0.03;
+                pos[i3 + 2] += Math.cos(time * 1.5 + phases[i]) * 0.03;
+                if (pos[i3 + 1] > 40) pos[i3 + 1] = -40; 
+            }
+            this.particles.geometry.attributes['position'].needsUpdate = true;
+            this.particles.rotation.y = time * 0.12; 
         }
-        this.particles.geometry.attributes['position'].needsUpdate = true;
-        this.particles.rotation.y = time * 0.12; 
-    }
 
-    if (this.bgTextMesh && !this.isIntroPlaying) {
-        this.bgTextMesh.rotation.z = -0.05 + Math.sin(time * 0.5) * 0.05;
-        this.bgTextMesh.rotation.x = -0.1 + Math.sin(time * 0.3) * 0.05;
-    }
+        if (this.bgTextMesh && !this.isIntroPlaying) {
+            this.bgTextMesh.rotation.z = -0.05 + Math.sin(time * 0.5) * 0.05;
+            this.bgTextMesh.rotation.x = -0.1 + Math.sin(time * 0.3) * 0.05;
+        }
 
-    if (this.artifactModel && this.artifactModel.userData['baseY'] !== undefined) {
-        this.artifactModel.position.y = this.artifactModel.userData['baseY'] + Math.sin(time * 0.4 + this.artifactModel.userData['phase']) * 0.8;
-    }
+        if (this.artifactModel && this.artifactModel.userData['baseY'] !== undefined) {
+            this.artifactModel.position.y = this.artifactModel.userData['baseY'] + Math.sin(time * 0.4 + this.artifactModel.userData['phase']) * 0.8;
+        }
 
-    if (this.artifact2Model && this.artifact2Model.userData['baseY'] !== undefined) {
-        this.artifact2Model.position.y = this.artifact2Model.userData['baseY'] + Math.sin(time * 0.7 + this.artifact2Model.userData['phase']) * 2.0; 
-        this.artifact2Model.rotation.z = Math.sin(time * 0.5) * 0.2;
-        this.artifact2Model.rotation.y += 0.002; 
-    }
+        if (this.artifact2Model && this.artifact2Model.userData['baseY'] !== undefined) {
+            this.artifact2Model.position.y = this.artifact2Model.userData['baseY'] + Math.sin(time * 0.7 + this.artifact2Model.userData['phase']) * 2.0; 
+            this.artifact2Model.rotation.z = Math.sin(time * 0.5) * 0.2;
+            this.artifact2Model.rotation.y += 0.002; 
+        }
 
-    if (this.artifact3Model && this.artifact3Model.userData['baseY'] !== undefined) {
-        this.artifact3Model.position.y = this.artifact3Model.userData['baseY'] + Math.sin(time * 0.5 + this.artifact3Model.userData['phase']) * 1.2; 
-        this.artifact3Model.rotation.x = 0.2 + Math.sin(time * 0.3) * 0.05; 
-    }
+        if (this.artifact3Model && this.artifact3Model.userData['baseY'] !== undefined) {
+            this.artifact3Model.position.y = this.artifact3Model.userData['baseY'] + Math.sin(time * 0.5 + this.artifact3Model.userData['phase']) * 1.2; 
+            this.artifact3Model.rotation.x = 0.2 + Math.sin(time * 0.3) * 0.05; 
+        }
 
-    if (this.artifact4Model && this.artifact4Model.userData['baseY'] !== undefined) {
-        this.artifact4Model.rotation.z = Math.sin(time * 0.2) * 0.05; 
-    }
+        if (this.artifact4Model && this.artifact4Model.userData['baseY'] !== undefined) {
+            this.artifact4Model.rotation.z = Math.sin(time * 0.2) * 0.05; 
+        }
 
-    if (this.artifact5Model && this.artifact5Model.userData['baseY'] !== undefined) {
-        this.artifact5Model.position.y = this.artifact5Model.userData['baseY'] + Math.sin(time * 0.3 + this.artifact5Model.userData['phase']) * 0.5; 
-    }
+        if (this.artifact5Model && this.artifact5Model.userData['baseY'] !== undefined) {
+            this.artifact5Model.position.y = this.artifact5Model.userData['baseY'] + Math.sin(time * 0.3 + this.artifact5Model.userData['phase']) * 0.5; 
+        }
 
-    if (this.godRays && this.godRays.length > 0) {
-        this.godRays.forEach((ray, i) => {
-            ray.intensity = 400 + Math.sin(time * 1.5 + (i * 2.2)) * 200;
-        });
-    }
+        if (this.godRays && this.godRays.length > 0) {
+            this.godRays.forEach((ray, i) => {
+                ray.intensity = 400 + Math.sin(time * 1.5 + (i * 2.2)) * 200;
+            });
+        }
+        
+        if (this.neonLight1 && this.neonLight2) {
+            this.neonLight1.intensity = 200 + Math.random() * 100 * (Math.random() > 0.8 ? 1 : 0);
+            this.neonLight2.intensity = 200 + Math.random() * 150 * (Math.random() > 0.9 ? 1 : 0);
+        }
 
-    this.composer.render();
+        if(this.composer) this.composer.render();
+    } else {
+        // Render Gallery View
+        if(this.currentGalleryGroup) {
+            this.currentGalleryGroup.rotation.y = time * 0.2; // Slow rotation of the item on display
+        }
+        if(this.galleryComposer) this.galleryComposer.render();
+    }
   };
+
+  private cleanupThreeJs() {
+     // Helper function if we need to manually dispose things, handled mostly by ngOnDestroy for now.
+  }
 
   @HostListener('window:resize')
   onWindowResize(): void {
-    if (this.camera && this.renderer && this.composer) {
-      this.camera.aspect = window.innerWidth / window.innerHeight;
+    if (this.camera && this.renderer && this.composer && this.galleryCamera && this.galleryComposer) {
+      const aspect = window.innerWidth / window.innerHeight;
+      this.camera.aspect = aspect;
       this.camera.updateProjectionMatrix();
+      
+      this.galleryCamera.aspect = aspect;
+      this.galleryCamera.updateProjectionMatrix();
+
       this.renderer.setSize(window.innerWidth, window.innerHeight);
       this.composer.setSize(window.innerWidth, window.innerHeight); 
+      this.galleryComposer.setSize(window.innerWidth, window.innerHeight); 
+      
       ScrollTrigger.refresh(); 
     }
+  }
+
+  // Handle returning from Gallery component (which we are now treating as a mode within App)
+  public handleGalleryClose() {
+      this.toggleGallery();
   }
 
   ngOnDestroy(): void {
     if (this.animationFrameId !== null) cancelAnimationFrame(this.animationFrameId);
     if (this.renderer) this.renderer.dispose();
     if (this.composer) this.composer.dispose();
+    if (this.galleryComposer) this.galleryComposer.dispose();
     document.body.style.overflowY = 'auto'; 
     ScrollTrigger.getAll().forEach(t => t.kill()); 
   }

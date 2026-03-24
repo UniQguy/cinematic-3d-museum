@@ -1,1 +1,58 @@
-<p>gallery works!</p>
+<div class="gallery-wrapper" (wheel)="onScroll($event)">
+  
+  <div #galleryCanvas class="webgl-canvas"></div>
+
+  @if (isLoading) {
+    <div class="loading-overlay">
+      <div class="loader-content">
+        <div class="cyber-spinner"></div>
+        <p class="loading-text">DECRYPTING ARCHIVES... {{ loadingProgress }}%</p>
+      </div>
+    </div>
+  }
+
+  <div class="holo-ui-layer" [class.visible]="!isLoading">
+    
+    <header class="gallery-header">
+      <div class="brand">ABYSSAL ARCHIVES</div>
+      <button class="back-btn" (click)="goBack()">[ RETURN TO SURFACE ]</button>
+    </header>
+
+    <div class="scroll-indicator">
+      <div class="mouse">
+        <div class="wheel"></div>
+      </div>
+      <span>SCROLL TO BROWSE</span>
+    </div>
+
+    <div class="data-panel" #dataPanel>
+      <div class="panel-header">
+        <span class="item-id">ARTIFACT // {{ currentItem.id }}</span>
+        <h1 class="item-title">{{ currentItem.title }}</h1>
+        <div class="scan-line"></div>
+      </div>
+      
+      <div class="panel-specs">
+        <div class="spec-box">
+          <span class="spec-label">ORIGIN</span>
+          <span class="spec-value">{{ currentItem.origin }}</span>
+        </div>
+        <div class="spec-box">
+          <span class="spec-label">ERA</span>
+          <span class="spec-value">{{ currentItem.era }}</span>
+        </div>
+        <div class="spec-box">
+          <span class="spec-label">STATUS</span>
+          <span class="spec-value highlight">{{ currentItem.status }}</span>
+        </div>
+      </div>
+
+      <div class="panel-description glass-effect">
+        <p>{{ currentItem.description }}</p>
+        <div class="corner-tl"></div>
+        <div class="corner-br"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
