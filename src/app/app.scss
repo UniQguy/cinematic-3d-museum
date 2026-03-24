@@ -80,3 +80,9 @@
 .editorial-body { font-family: var(--font-ui); font-size: 1rem; font-weight: 200; line-height: 1.6; opacity: 0.7; margin-bottom: 2rem; }
 .data-points { display: flex; gap: 3rem; font-family: var(--font-ui); font-size: 0.9rem; font-weight: 400; }
 .data span { font-size: 0.6rem; color: var(--accent); letter-spacing: 2px; }
+
+
+.delayed-text {
+  opacity: 0;
+  transform: translateY(30px); /* Creates a subtle slide-up effect */
+}
