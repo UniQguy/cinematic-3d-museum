@@ -1,25 +1,12 @@
-/* -----------------------------------------
-   GLOBAL VARIABLES & FONTS
-   The absolute foundation of the Abyss.
------------------------------------------- */
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;700&family=Manrope:wght@200;300;400;600&display=swap');
 
 :root {
-  --bg-color: #010a12; /* Matches the Three.js fog perfectly */
+  --bg-color: #010a12;
   --accent: #44ffcc;
   --text-main: #ffffff;
-  --font-display: 'Cinzel', serif;
-  --font-ui: 'Manrope', sans-serif;
 }
 
-/* -----------------------------------------
-   HARD RESET
------------------------------------------- */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
+* { margin: 0; padding: 0; box-sizing: border-box; }
 
 html, body {
   width: 100%;
@@ -27,33 +14,21 @@ html, body {
   background-color: var(--bg-color);
   color: var(--text-main);
   
-  /* CRITICAL: Lock the scrollbar globally until the drone drop is finished! */
+  /* Locked initially so the user watches the intro */
   overflow-x: hidden;
   overflow-y: hidden; 
-  overscroll-behavior: none; /* Stops the bouncy rubber-band scroll on Macs/Phones */
+  overscroll-behavior: none;
   
-  /* Keep fonts rendering beautifully sharp like an Apple site */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* -----------------------------------------
-   CUSTOM SCROLLBAR (The Luxury Detail)
------------------------------------------- */
-::-webkit-scrollbar {
-  width: 8px; /* Very thin and sleek */
-}
-
-::-webkit-scrollbar-track {
-  background: var(--bg-color);
-}
-
+/* Custom glowing scrollbar */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: var(--bg-color); }
 ::-webkit-scrollbar-thumb {
-  background: rgba(68, 255, 204, 0.2); /* A dim, ghosted cyan */
+  background: rgba(68, 255, 204, 0.2);
   border-radius: 10px;
   transition: all 0.3s ease;
 }
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(68, 255, 204, 0.8); /* Glows bright when you grab it */
-}
+::-webkit-scrollbar-thumb:hover { background: rgba(68, 255, 204, 0.8); }

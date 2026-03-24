@@ -21,7 +21,6 @@
   height: 100vh;
   z-index: 1; 
   pointer-events: none;
-  /* No mix-blend-mode. Pure, solid WebGL rendering. */
 }
 
 /* --- LAYER 2: FOREGROUND UI --- */
@@ -31,7 +30,7 @@
 }
 
 .ui-reveal-layer {
-  opacity: 0; /* HIDDEN UNTIL DRONE DROP FINISHES */
+  opacity: 0; /* Hidden initially, unlocked by GSAP */
 }
 
 .editorial-nav {
