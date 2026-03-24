@@ -1,43 +1,75 @@
 <main class="awwwards-experience">
+  
+  <audio #bgMusic loop preload="auto">
+    <source src="assets/ambient.mp3" type="audio/mpeg">
+  </audio>
+
+  <div class="preloader-overlay" #preloaderOverlay>
+    <div class="preloader-content">
+      <p class="preloader-label">INITIALIZING EXPEDITION</p>
+      <div class="progress-container">
+        <span class="progress-number">{{ loadingProgress }}</span><span class="progress-percent">%</span>
+      </div>
+      <div class="progress-bar-container">
+        <div class="progress-bar" [style.width.%]="loadingProgress"></div>
+      </div>
+      
+      <button class="enter-btn" [class.visible]="isLoaded" (click)="startExperience()">
+        ENTER EXPEDITION
+      </button>
+    </div>
+  </div>
+
   <div #canvasContainer class="webgl-canvas"></div>
 
   <div class="scroll-track" #scrollTrack>
     <div class="ui-reveal-layer">
+      
       <nav class="editorial-nav">
         <div class="brand">C / A</div>
         <div class="status">LIVE FEED • 17M DEPTH</div>
-        <div class="menu-btn">EXPLORE</div>
+        
+        <div class="nav-controls">
+          <button class="sound-toggle" (click)="toggleSound()">
+            <span class="sound-text">SOUND [{{ isMuted ? 'OFF' : 'ON' }}]</span>
+            <div class="sound-bars" [class.playing]="!isMuted">
+              <span></span><span></span><span></span>
+            </div>
+          </button>
+          <div class="menu-btn" (click)="toggleMenu()" style="cursor: pointer;">EXPLORE</div>
+        </div>
       </nav>
 
-      <section class="scroll-section hero">
+      <div class="hud-tracker">
+        <div class="hud-line-container">
+          <div class="hud-progress-line" #depthIndicator></div>
+        </div>
+        <div class="hud-data">
+          <span class="hud-label">CURRENT DEPTH</span>
+          <span class="hud-value"><span #depthValue>0</span>M</span>
+        </div>
+      </div>
+
+      <section class="scroll-section detail">
         <div class="content-block left-align">
           <p class="overline">/// EXPEDITION 01</p>
           <h2 class="editorial-title">SILENT<br>GUARDIAN</h2>
+          <div class="glass-panel">
+            <h3 class="editorial-subtitle">Forged in Bronze</h3>
+            <p class="editorial-body">Born from the melted medals of mariners. It waits in the eternal quiet, wrapped in bioluminescence and shifting currents.</p>
+          </div>
         </div>
       </section>
-
-      <section class="scroll-section detail">
-        <div class="content-block right-align glass-panel">
-          <h3 class="editorial-subtitle">Forged in Bronze</h3>
-          <p class="editorial-body">Born from the melted medals of mariners. It waits in the eternal quiet, wrapped in bioluminescence and shifting currents.</p>
-        </div>
-      </section>
-
-      <section class="scroll-section empty"></section>
-      <section class="scroll-section empty"></section>
 
       <section class="scroll-section detail stage-2-trigger">
-        <div class="content-block left-align glass-panel delayed-text stage-2-text">
+        <div class="content-block right-align glass-panel delayed-text stage-2-text">
           <h3 class="editorial-subtitle">Ancient Echoes</h3>
           <p class="editorial-body">A serene relic from another time, resting peacefully in the abyssal zone. Unmarked, unmapped, undisturbed.</p>
         </div>
       </section>
 
-      <section class="scroll-section empty"></section>
-      <section class="scroll-section empty"></section>
-
       <section class="scroll-section detail stage-3-trigger">
-        <div class="content-block right-align glass-panel delayed-text stage-3-text">
+        <div class="content-block left-align glass-panel delayed-text stage-3-text">
           <h3 class="editorial-subtitle">The Anomaly</h3>
           <p class="editorial-body">Sensors detect an unidentified high-mass structure resting at maximum depth. Proceed with extreme caution.</p>
           <div class="data-points">
@@ -47,7 +79,78 @@
         </div>
       </section>
 
-      <section class="scroll-section empty"></section>
+      <section class="scroll-section detail stage-4-trigger">
+        <div class="content-block right-align glass-panel delayed-text stage-4-text">
+          <h3 class="editorial-subtitle">Fallen Colossus</h3>
+          <p class="editorial-body">A symbol of an old world, now resting eternally on its side. Corroded copper bleeding into the abyssal stream.</p>
+          <div class="data-points">
+            <div class="data"><span>DEPTH</span><br>412M</div>
+            <div class="data"><span>RADIATION</span><br>TRACE</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="scroll-section detail stage-5-trigger">
+        <div class="content-block left-align glass-panel delayed-text stage-5-text">
+          <h3 class="editorial-subtitle">Abyssal Reflection</h3>
+          <p class="editorial-body">A perfectly preserved reflective surface buried in the trench floor. It shows no signs of degradation or marine growth.</p>
+          <div class="data-points">
+            <div class="data"><span>DEPTH</span><br>605M</div>
+            <div class="data"><span>ORIGIN</span><br>CLASSIFIED</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="scroll-section detail stage-6-trigger" style="display: flex; align-items: center; justify-content: center; text-align: center; padding: 0; pointer-events: none;">
+        <div class="cinema-screen delayed-text stage-6-text" style="background: radial-gradient(circle, rgba(1,10,18,0.7) 0%, rgba(1,10,18,0.9) 100%); padding: 5rem 10vw; border: 1px solid rgba(255,204,68,0.2); box-shadow: 0 0 50px rgba(0,0,0,0.8); backdrop-filter: blur(10px); width: 100vw;">
+          
+          <p class="overline" style="color: #ffcc44; letter-spacing: 10px; font-size: 1rem; margin-bottom: 1rem; text-shadow: 0 0 15px rgba(255,204,68,0.5);">/// EXPEDITION COMPLETE ///</p>
+          <h2 class="editorial-title" style="font-size: clamp(3rem, 7vw, 7rem); color: #ffffff; text-shadow: 0 0 30px rgba(255,255,255,0.4); margin-bottom: 4rem; line-height: 1;">THE THRESHOLD</h2>
+          
+          <div style="display: flex; flex-wrap: wrap; gap: 4rem; justify-content: center; align-items: center; border-top: 1px solid rgba(255,204,68,0.3); padding-top: 3rem;">
+            <div style="text-align: left;">
+              <p style="color: #ffcc44; font-family: var(--font-ui); font-weight: 600; letter-spacing: 4px; font-size: 0.8rem; margin-bottom: 1.5rem;">DEVELOPED BY</p>
+              <p style="font-family: var(--font-display); font-size: 1.8rem; margin-bottom: 0.5rem;">RAY PRASHANT <span style="font-family: var(--font-ui); font-size: 0.9rem; opacity: 0.4; margin-left: 15px; letter-spacing: 1px;">202302519010123</span></p>
+              <p style="font-family: var(--font-display); font-size: 1.8rem; margin-bottom: 0.5rem;">SHAIKH HABIB <span style="font-family: var(--font-ui); font-size: 0.9rem; opacity: 0.4; margin-left: 15px; letter-spacing: 1px;">202302519010128</span></p>
+              <p style="font-family: var(--font-display); font-size: 1.8rem;">GADHIYA VIDIT <span style="font-family: var(--font-ui); font-size: 0.9rem; opacity: 0.4; margin-left: 15px; letter-spacing: 1px;">202302519010091</span></p>
+            </div>
+            
+            <div style="text-align: left; padding-left: 4rem; border-left: 1px solid rgba(255,255,255,0.1);">
+              <p style="color: #ffcc44; font-family: var(--font-ui); font-weight: 600; letter-spacing: 4px; font-size: 0.8rem; margin-bottom: 1.5rem;">PROJECT GUIDANCE</p>
+              <p style="font-family: var(--font-display); font-size: 3rem; font-style: italic; color: #ffffff; text-shadow: 0 0 20px rgba(255,255,255,0.3);">Prof. Neha Samsir</p>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+    </div>
+  </div> <div class="menu-overlay" #menuOverlay>
+    <div class="menu-close-btn" (click)="toggleMenu()">[ CLOSE ]</div>
+    
+    <div class="menu-links">
+      <div class="menu-item">
+        <span class="menu-num">01</span>
+        <h1 class="menu-text">THE EXPEDITION</h1>
+      </div>
+      <div class="menu-item">
+        <span class="menu-num">02</span>
+        <h1 class="menu-text">THE CREW</h1>
+      </div>
+      <div class="menu-item">
+        <span class="menu-num">03</span>
+        <h1 class="menu-text">TECH STACK</h1>
+      </div>
+      <div class="menu-item">
+        <span class="menu-num">04</span>
+        <h1 class="menu-text">TRANSMISSIONS</h1>
+      </div>
+    </div>
+    
+    <div class="menu-footer">
+      <p>CLASSIFIED DATA // CLEARANCE LEVEL: OMEGA</p>
+      <p>EST. 2026 // PROF. NEHA SAMSIR</p>
     </div>
   </div>
+
 </main>

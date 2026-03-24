@@ -1,4 +1,4 @@
-import { Component, ElementRef, ViewChild, AfterViewInit, OnDestroy, HostListener } from '@angular/core';
+import { Component, ElementRef, ViewChild, AfterViewInit, OnDestroy, HostListener, ChangeDetectorRef } from '@angular/core';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { gsap } from 'gsap';
@@ -19,6 +19,25 @@ gsap.registerPlugin(ScrollTrigger);
 export class App implements AfterViewInit, OnDestroy {
   @ViewChild('canvasContainer', { static: true }) canvasContainer!: ElementRef<HTMLDivElement>;
   @ViewChild('scrollTrack', { static: true }) scrollTrack!: ElementRef<HTMLDivElement>;
+  
+  // Preloader Element Reference
+  @ViewChild('preloaderOverlay', { static: true }) preloaderOverlay!: ElementRef<HTMLDivElement>;
+
+  // HUD Depth Tracker References
+  @ViewChild('depthValue', { static: false }) depthValue!: ElementRef<HTMLSpanElement>;
+  @ViewChild('depthIndicator', { static: false }) depthIndicator!: ElementRef<HTMLDivElement>;
+
+  // MENU REFERENCE
+  @ViewChild('menuOverlay', { static: false }) menuOverlay!: ElementRef<HTMLDivElement>;
+
+  // AUDIO REFERENCE
+  @ViewChild('bgMusic', { static: false }) bgMusic!: ElementRef<HTMLAudioElement>;
+
+  // State variables for UI
+  public loadingProgress: number = 0;
+  public isLoaded: boolean = false;
+  public isMuted: boolean = false; // Audio starts unmuted
+  public isMenuOpen: boolean = false;
 
   private renderer!: THREE.WebGLRenderer;
   private composer!: EffectComposer; 
@@ -26,8 +45,11 @@ export class App implements AfterViewInit, OnDestroy {
   private camera!: THREE.PerspectiveCamera;
   
   private oceanModel!: THREE.Group; 
-  private artifactModel: THREE.Group | null = null;   // The Buddha
-  private artifact2Model: THREE.Group | null = null;  // The Deepest Anomaly
+  private artifactModel: THREE.Group | null = null;  
+  private artifact2Model: THREE.Group | null = null;  
+  private artifact3Model: THREE.Group | null = null;  
+  private artifact4Model: THREE.Group | null = null;  
+  private artifact5Model: THREE.Group | null = null;  
   
   private particles!: THREE.Points; 
   private bgTextMesh!: THREE.Mesh; 
@@ -36,7 +58,15 @@ export class App implements AfterViewInit, OnDestroy {
   private cameraTarget = new THREE.Vector3(0, -10, 0); 
   private isIntroPlaying = true;
 
+  private neonLight1!: THREE.PointLight;
+  private neonLight2!: THREE.PointLight;
+  private godRays: THREE.SpotLight[] = [];
+
+  constructor(private cdr: ChangeDetectorRef) {}
+
   ngAfterViewInit(): void {
+    // Initial scroll lock until user clicks Enter
+    document.body.style.overflowY = 'hidden'; 
     this.initThreeJsScene();
   }
 
@@ -45,7 +75,6 @@ export class App implements AfterViewInit, OnDestroy {
 
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x010a12);
-    // Tuned fog perfectly for deep Z-axis flying
     this.scene.fog = new THREE.FogExp2(0x010a12, 0.035); 
 
     this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -56,10 +85,12 @@ export class App implements AfterViewInit, OnDestroy {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace; 
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     container.appendChild(this.renderer.domElement);
 
     const renderScene = new RenderPass(this.scene, this.camera);
-    const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.2, 0.5, 0.2);
+    const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.15);
     this.composer = new EffectComposer(this.renderer);
     this.composer.addPass(renderScene);
     this.composer.addPass(bloomPass);
@@ -69,8 +100,8 @@ export class App implements AfterViewInit, OnDestroy {
     sunBeam.position.set(5, 20, 10);
     this.scene.add(sunBeam);
 
-    // --- MASSIVE Z-AXIS PLANKTON FIELD ---
-    const particleCount = 2000;
+    // PLANKTON FIELD
+    const particleCount = 4000;
     const particleGeo = new THREE.BufferGeometry();
     const particlePos = new Float32Array(particleCount * 3);
     const particlePhases = new Float32Array(particleCount); 
@@ -78,9 +109,8 @@ export class App implements AfterViewInit, OnDestroy {
     for(let i = 0; i < particleCount; i++) {
         const i3 = i * 3;
         particlePos[i3] = (Math.random() - 0.5) * 100;     
-        particlePos[i3 + 1] = (Math.random() - 0.5) * 60; 
-        // Flow stretches insanely deep (Z: 20 to -180) to cover the whole flight
-        particlePos[i3 + 2] = (Math.random() * 200) - 180; 
+        particlePos[i3 + 1] = (Math.random() - 0.5) * 100; 
+        particlePos[i3 + 2] = (Math.random() * 520) - 500; 
         particlePhases[i] = Math.random() * Math.PI * 2;  
     }
     
@@ -91,15 +121,33 @@ export class App implements AfterViewInit, OnDestroy {
     this.particles = new THREE.Points(particleGeo, particleMat);
     this.scene.add(this.particles);
 
-    // Prevent black screen while waiting
     this.startAnimationLoop();
-
     await this.create3DText();
 
-    // --- STAGE 1: MAIN STATUE (Z = 0) ---
+    // ========================================================
+    // SCENE LOADING MANAGER
+    // ========================================================
+    const loadingManager = new THREE.LoadingManager();
+    
+    loadingManager.onProgress = (url, itemsLoaded, itemsTotal) => {
+      this.loadingProgress = Math.floor((itemsLoaded / itemsTotal) * 100);
+      this.cdr.detectChanges(); // Force Angular to update the HTML text immediately
+    };
+
+    loadingManager.onLoad = () => {
+      // Small delay to let user see 100% before button pops up
+      setTimeout(() => {
+        this.isLoaded = true;
+        this.cdr.detectChanges();
+      }, 500);
+    };
+
+    const gltfLoader = new GLTFLoader(loadingManager);
+
+    // --- STAGES LOADED VIA MANAGER ---
     try {
-      const gltf = await new GLTFLoader().loadAsync('statue.glb');
-      this.oceanModel = gltf.scene;
+      const gltf1 = await gltfLoader.loadAsync('statue.glb');
+      this.oceanModel = gltf1.scene;
       let statueMesh: THREE.Mesh | null = null;
       let maxVolume = 0;
       this.oceanModel.traverse((child) => {
@@ -123,46 +171,188 @@ export class App implements AfterViewInit, OnDestroy {
       this.scene.add(this.oceanModel);
     } catch (e) { console.error("Error loading statue", e); }
 
-    // --- STAGE 2: THE BUDDHA (Z = -65) ---
     try {
-      const gltfArtifact = await new GLTFLoader().loadAsync('artifact.glb');
+      const gltfArtifact = await gltfLoader.loadAsync('artifact.glb');
       this.artifactModel = gltfArtifact.scene;
       const box = new THREE.Box3().setFromObject(this.artifactModel);
       const size = box.getSize(new THREE.Vector3());
       const center = box.getCenter(new THREE.Vector3());
       const scale = 10 / Math.max(size.x, size.y, size.z);
       this.artifactModel.scale.set(scale, scale, scale);
-      
-      // POSITION: Pushed Right (X=14), Deep Z (-65)
       this.artifactModel.position.set((-center.x * scale) + 14, (-center.y * scale) - 5, (-center.z * scale) - 65);
-      
-      // TILT: Sunken and severe
-      this.artifactModel.rotation.z = -0.5; 
-      this.artifactModel.rotation.x = -0.3; 
-      this.artifactModel.rotation.y = -0.4; 
-      
+      this.artifactModel.rotation.set(-0.3, -0.4, -0.5); 
       this.artifactModel.userData = { baseY: this.artifactModel.position.y, phase: Math.random() * Math.PI };
       this.scene.add(this.artifactModel);
     } catch (e) { console.error("Missing artifact.glb", e); }
 
-    // --- STAGE 3: THE DEEP ANOMALY (Z = -130) ---
     try {
-      const gltfArtifact2 = await new GLTFLoader().loadAsync('artifact2.glb');
+      const gltfArtifact2 = await gltfLoader.loadAsync('artifact2.glb');
       this.artifact2Model = gltfArtifact2.scene;
       const box = new THREE.Box3().setFromObject(this.artifact2Model);
       const size = box.getSize(new THREE.Vector3());
       const center = box.getCenter(new THREE.Vector3());
       const scale = 14 / Math.max(size.x, size.y, size.z); 
       this.artifact2Model.scale.set(scale, scale, scale);
-      
-      // POSITION: Pushed Left (X=-16), Insanely Deep Z (-130)
       this.artifact2Model.position.set((-center.x * scale) - 16, (-center.y * scale) - 2, (-center.z * scale) - 130);
-      
       this.artifact2Model.userData = { baseY: this.artifact2Model.position.y, phase: Math.random() * Math.PI };
       this.scene.add(this.artifact2Model);
     } catch (e) { console.error("Missing artifact2.glb", e); }
 
-    this.playCinematicIntro(); 
+    try {
+      const gltfArtifact3 = await gltfLoader.loadAsync('artifact3.glb');
+      this.artifact3Model = gltfArtifact3.scene;
+      const box = new THREE.Box3().setFromObject(this.artifact3Model);
+      const size = box.getSize(new THREE.Vector3());
+      const center = box.getCenter(new THREE.Vector3());
+      const scale = 16 / Math.max(size.x, size.y, size.z); 
+      this.artifact3Model.scale.set(scale, scale, scale);
+      this.artifact3Model.position.set((-center.x * scale) - 14, (-center.y * scale) + 0, (-center.z * scale) - 195);
+      this.artifact3Model.rotation.set(0.2, -0.3, -0.2); 
+      this.artifact3Model.userData = { baseY: this.artifact3Model.position.y, phase: Math.random() * Math.PI };
+      this.scene.add(this.artifact3Model);
+    } catch (e) { console.error("Missing artifact3.glb", e); }
+
+    try {
+      const gltfArtifact4 = await gltfLoader.loadAsync('artifact4.glb');
+      this.artifact4Model = gltfArtifact4.scene;
+      const box = new THREE.Box3().setFromObject(this.artifact4Model);
+      const size = box.getSize(new THREE.Vector3());
+      const center = box.getCenter(new THREE.Vector3());
+      const scale = 18 / Math.max(size.x, size.y, size.z); 
+      this.artifact4Model.scale.set(scale, scale, scale);
+      
+      this.artifact4Model.position.set((-center.x * scale), (-center.y * scale) - 15, (-center.z * scale) - 260);
+      this.artifact4Model.rotation.set(-Math.PI / 2, 0, 0); 
+
+      this.artifact4Model.traverse((child) => {
+        if ((child as THREE.Mesh).isMesh) {
+            const mesh = child as THREE.Mesh;
+            mesh.castShadow = true;      
+            mesh.receiveShadow = true;   
+            if (mesh.material) {
+                const mat = mesh.material as THREE.MeshStandardMaterial;
+                mat.metalness = 0.9;     
+                mat.roughness = 0.1;     
+                mat.needsUpdate = true;
+            }
+        }
+      });
+      
+      this.artifact4Model.userData = { baseY: this.artifact4Model.position.y, phase: Math.random() * Math.PI };
+      this.scene.add(this.artifact4Model);
+
+      const droneLight = new THREE.SpotLight(0xcceeff, 150); 
+      droneLight.position.set(2, 10, -255); 
+      droneLight.angle = Math.PI / 3;      
+      droneLight.penumbra = 1.0;           
+      droneLight.decay = 2;                
+      droneLight.distance = 60;            
+      droneLight.castShadow = true;
+      droneLight.target.position.set(0, -15, -260); 
+      this.scene.add(droneLight);
+      this.scene.add(droneLight.target);
+    } catch (e) { console.error("Missing artifact4.glb", e); }
+
+    try {
+      const gltfArtifact5 = await gltfLoader.loadAsync('artifact5.glb');
+      this.artifact5Model = gltfArtifact5.scene;
+      const box = new THREE.Box3().setFromObject(this.artifact5Model);
+      const size = box.getSize(new THREE.Vector3());
+      const center = box.getCenter(new THREE.Vector3());
+      
+      const scale = 35 / Math.max(size.x, size.y, size.z); 
+      this.artifact5Model.scale.set(scale, scale, scale);
+      
+      this.artifact5Model.position.set((-center.x * scale), (-center.y * scale) - 5, (-center.z * scale) - 350);
+      this.artifact5Model.userData = { baseY: this.artifact5Model.position.y, phase: Math.random() * Math.PI };
+      this.scene.add(this.artifact5Model);
+
+      const rayColors = [0xffaa44, 0xffcc88, 0xffaa44];
+      rayColors.forEach((color, index) => {
+          const ray = new THREE.SpotLight(color, 600); 
+          ray.position.set((index - 1.5) * 8, 15, -365); 
+          ray.target.position.set((index - 1.5) * 10, -10, -300); 
+          ray.angle = Math.PI / 4;      
+          ray.penumbra = 0.8;           
+          ray.decay = 1.5;                
+          ray.distance = 150;
+          this.scene.add(ray);
+          this.scene.add(ray.target);
+          this.godRays.push(ray);
+      });
+    } catch (e) { console.error("Missing artifact5.glb", e); }
+  }
+
+  // ========================================================
+  // AUDIO TOGGLE LOGIC
+  // ========================================================
+  public toggleSound(): void {
+    if (!this.bgMusic) return;
+    
+    this.isMuted = !this.isMuted;
+    if (this.isMuted) {
+      gsap.to(this.bgMusic.nativeElement, { volume: 0, duration: 1, onComplete: () => this.bgMusic.nativeElement.pause() });
+    } else {
+      this.bgMusic.nativeElement.play();
+      gsap.to(this.bgMusic.nativeElement, { volume: 0.4, duration: 1 });
+    }
+  }
+
+  // ========================================================
+  // MENU OVERLAY LOGIC
+  // ========================================================
+  public toggleMenu(): void {
+    if (!this.menuOverlay) return;
+
+    this.isMenuOpen = !this.isMenuOpen;
+    const menuEl = this.menuOverlay.nativeElement;
+    const menuTexts = menuEl.querySelectorAll('.menu-text');
+
+    if (this.isMenuOpen) {
+      // Animate Menu IN
+      gsap.to(menuEl, { opacity: 1, y: 0, duration: 0.8, ease: "power3.inOut", pointerEvents: "auto" });
+      
+      // Stagger animate links sliding UP
+      gsap.to(menuTexts, { 
+        y: 0, 
+        duration: 0.8, 
+        stagger: 0.1, 
+        ease: "power3.out", 
+        delay: 0.4 
+      });
+      
+      // Optional: Pause background audio slightly
+      if (this.bgMusic && !this.isMuted) gsap.to(this.bgMusic.nativeElement, { volume: 0.1, duration: 0.5 });
+
+    } else {
+      // Animate Menu OUT
+      gsap.to(menuTexts, { y: '100%', duration: 0.4, ease: "power2.in" });
+      gsap.to(menuEl, { opacity: 0, y: '-100%', duration: 0.8, ease: "power3.inOut", delay: 0.2, pointerEvents: "none" });
+      
+      // Restore volume
+      if (this.bgMusic && !this.isMuted) gsap.to(this.bgMusic.nativeElement, { volume: 0.4, duration: 0.5, delay: 0.5 });
+    }
+  }
+
+  // ========================================================
+  // TRIGGERED WHEN USER CLICKS "ENTER EXPEDITION"
+  // ========================================================
+  public startExperience(): void {
+    if (this.bgMusic) {
+        this.bgMusic.nativeElement.volume = 0.4;
+        this.bgMusic.nativeElement.play().catch(e => console.log("Audio play blocked", e));
+    }
+
+    gsap.to(this.preloaderOverlay.nativeElement, {
+        opacity: 0,
+        duration: 1.5,
+        ease: "power2.inOut",
+        onComplete: () => {
+            this.preloaderOverlay.nativeElement.style.display = 'none';
+        }
+    });
+
+    this.playCinematicIntro();
   }
 
   private async create3DText(): Promise<void> {
@@ -172,37 +362,24 @@ export class App implements AfterViewInit, OnDestroy {
     const ctx = canvas.getContext('2d')!;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.font = '400 600px "Cinzel", serif'; ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-    
-    // Perfectly centered typography so OBLIVION isn't cut off
     ctx.fillText('ABYSS', canvas.width / 2, canvas.height / 2 - 280);
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)'; ctx.lineWidth = 10;
     ctx.strokeText('OBLIVION', canvas.width / 2, canvas.height / 2 + 280);
-    
     const texture = new THREE.CanvasTexture(canvas);
     texture.minFilter = THREE.LinearFilter;
-    
-    // DoubleSide allows us to physically fly THROUGH the text without it glitching
-    const material = new THREE.MeshBasicMaterial({ 
-        map: texture, 
-        transparent: true, 
-        opacity: 0, 
-        depthWrite: false, 
-        fog: true,
-        side: THREE.DoubleSide 
-    });
-    
-    // Expanded PlaneGeometry to fit the text perfectly
+    const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, opacity: 0, depthWrite: false, fog: true, side: THREE.DoubleSide });
     this.bgTextMesh = new THREE.Mesh(new THREE.PlaneGeometry(160, 80), material);
+    
     this.bgTextMesh.position.set(0, 6, -25); 
+    this.bgTextMesh.rotation.set(-0.1, 0.1, -0.05);
+    
     this.scene.add(this.bgTextMesh);
   }
 
   private playCinematicIntro(): void {
-    // Text fades in instantly so you see it in all its glory right away
     if (this.bgTextMesh) {
         gsap.to((this.bgTextMesh.material as THREE.Material), { opacity: 1, duration: 3, ease: "power2.out" });
     }
-
     gsap.to(this.camera.position, { y: 8, z: 15, duration: 4.5, ease: "power3.inOut" });
     gsap.to(this.cameraTarget, { y: 2, z: 0, duration: 4.5, ease: "power3.inOut",
         onComplete: () => {
@@ -215,53 +392,84 @@ export class App implements AfterViewInit, OnDestroy {
   }
 
   private setupScrollAnimation(): void {
-    const tl = gsap.timeline({ scrollTrigger: { trigger: this.scrollTrack.nativeElement, start: "top top", end: "bottom bottom", scrub: 1.5 } });
+    const sections = document.querySelectorAll('.scroll-section');
+    const delayedTexts = document.querySelectorAll('.delayed-text');
 
-    // --- GRAB TEXT PANELS & HIDE THEM ---
-    const detailPanels = document.querySelectorAll('.detail');
-    if (detailPanels.length >= 3) {
-        gsap.set(detailPanels[1], { opacity: 0, y: 40 }); // Buddha Text (Hidden)
-        gsap.set(detailPanels[2], { opacity: 0, y: 40 }); // Anomaly Text (Hidden)
+    if (delayedTexts.length > 0) gsap.set(delayedTexts, { opacity: 0, y: 80 });
+
+    const tl = gsap.timeline({ 
+        scrollTrigger: { 
+            trigger: this.scrollTrack.nativeElement, 
+            start: "top top", 
+            end: "bottom bottom", 
+            scrub: 1,
+            onUpdate: (self) => {
+                const currentDepth = Math.floor(self.progress * 450);
+                if (this.depthValue) {
+                    this.depthValue.nativeElement.innerText = currentDepth.toString();
+                }
+                if (this.depthIndicator) {
+                    this.depthIndicator.nativeElement.style.height = `${self.progress * 100}%`;
+                }
+            }
+        } 
+    });
+
+    const introText = sections[0]?.querySelector('.content-block');
+    if (introText) tl.to(introText, { opacity: 0, y: -50, duration: 0.5 }, 0);
+    if (this.bgTextMesh) tl.to(this.bgTextMesh.position, { y: 25, duration: 1 }, 0);
+
+    tl.to(this.camera.position, { x: 8, y: -2, z: -55, ease: "power1.inOut", duration: 1 }, 0)
+      .to(this.cameraTarget, { x: 14, y: -4, z: -65, ease: "power1.inOut", duration: 1 }, 0);
+    if (delayedTexts[0]) {
+        tl.fromTo(delayedTexts[0], { opacity: 0, y: 50 }, { opacity: 1, y: 0, ease: "power2.out", duration: 0.4 }, 0.6)
+          .to(delayedTexts[0], { opacity: 0, y: -50, ease: "power2.in", duration: 0.3 }, 1.2);
     }
 
-    // --- STAGE 1: Dive to Statue (Scroll Timeline: 0.0 to 2.0) ---
-    tl.to(this.camera.position, { y: 0, z: 8, duration: 2, ease: "none" }, 0);
-    tl.to(this.cameraTarget, { y: 4, duration: 2, ease: "none" }, 0);
-    if (this.bgTextMesh) tl.to(this.bgTextMesh.position, { y: 15, duration: 2, ease: "none" }, 0);
-
-    // --- STAGE 2: Fly FORWARD, Drift RIGHT to Buddha (Scroll Timeline: 2.5 to 5.5) ---
-    // Notice the start time is 2.5. This gives a 0.5s pause to read the first panel.
-    tl.to(this.camera.position, { x: 8, y: -2, z: -55, duration: 3, ease: "power2.inOut" }, 2.5);
-    tl.to(this.cameraTarget, { x: 14, y: -4, z: -65, duration: 3, ease: "power2.inOut" }, 2.5);
-
-    // FIX: Reveal Buddha text ONLY AT TIME 5.5 (Exactly when the camera stops flying)
-    if (detailPanels.length >= 3) {
-        tl.to(detailPanels[1], { opacity: 1, y: 0, duration: 0.8, ease: "power2.out" }, 5.5);
+    tl.to(this.camera.position, { x: -8, y: -1, z: -120, ease: "power1.inOut", duration: 1 }, 1)
+      .to(this.cameraTarget, { x: -16, y: -2, z: -130, ease: "power1.inOut", duration: 1 }, 1);
+    if (delayedTexts[1]) {
+        tl.fromTo(delayedTexts[1], { opacity: 0, y: 50 }, { opacity: 1, y: 0, ease: "power2.out", duration: 0.4 }, 1.6)
+          .to(delayedTexts[1], { opacity: 0, y: -50, ease: "power2.in", duration: 0.3 }, 2.2);
     }
 
-    // --- STAGE 3: Fly DEEPER, Drift LEFT to Anomaly (Scroll Timeline: 6.5 to 9.5) ---
-    // Start time 6.5 gives a 1-second reading window for the Buddha text before flying away.
-    tl.to(this.camera.position, { x: -8, y: -1, z: -120, duration: 3, ease: "power2.inOut" }, 6.5);
-    tl.to(this.cameraTarget, { x: -16, y: -2, z: -130, duration: 3, ease: "power2.inOut" }, 6.5);
+    tl.to(this.camera.position, { x: 8, y: -2, z: -185, ease: "power1.inOut", duration: 1 }, 2)
+      .to(this.cameraTarget, { x: -14, y: 0, z: -195, ease: "power1.inOut", duration: 1 }, 2);
+    if (delayedTexts[2]) {
+        tl.fromTo(delayedTexts[2], { opacity: 0, y: 50 }, { opacity: 1, y: 0, ease: "power2.out", duration: 0.4 }, 2.6)
+          .to(delayedTexts[2], { opacity: 0, y: -50, ease: "power2.in", duration: 0.3 }, 3.2);
+    }
 
-    // FIX: Reveal Anomaly text ONLY AT TIME 9.5 (Exactly when the camera stops flying)
-    if (detailPanels.length >= 3) {
-        tl.to(detailPanels[2], { opacity: 1, y: 0, duration: 0.8, ease: "power2.out" }, 9.5);
+    tl.to(this.camera.position, { x: 15, y: 15, z: -250, ease: "power1.in", duration: 0.5 }, 3)
+      .to(this.cameraTarget, { x: 0, y: -15, z: -260, ease: "power1.in", duration: 0.5 }, 3)
+      .to(this.camera.position, { x: -15, y: 10, z: -265, ease: "power1.out", duration: 0.5 }, 3.5)
+      .to(this.cameraTarget, { x: 0, y: -15, z: -260, ease: "power1.out", duration: 0.5 }, 3.5);
+    if (delayedTexts[3]) {
+        tl.fromTo(delayedTexts[3], { opacity: 0, y: 50 }, { opacity: 1, y: 0, ease: "power2.out", duration: 0.4 }, 3.6)
+          .to(delayedTexts[3], { opacity: 0, y: -50, ease: "power2.in", duration: 0.3 }, 4.2);
+    }
+
+    tl.to(this.camera.position, { x: 20, y: -5, z: -320, ease: "power1.inOut", duration: 0.4 }, 4)
+      .to(this.cameraTarget, { x: 0, y: -10, z: -350, ease: "power1.inOut", duration: 0.4 }, 4);
+    tl.to(this.camera.position, { x: 0, y: -5, z: -335, ease: "none", duration: 0.3 }, 4.4)
+      .to(this.cameraTarget, { x: 0, y: -5, z: -350, ease: "none", duration: 0.3 }, 4.4);
+    tl.to(this.camera.position, { x: 0, y: 10, z: -380, ease: "power2.out", duration: 0.3 }, 4.7)
+      .to(this.cameraTarget, { x: 0, y: 20, z: -450, ease: "power2.out", duration: 0.3 }, 4.7);
+
+    if (delayedTexts[4]) {
+        tl.fromTo(delayedTexts[4], 
+            { opacity: 0, scale: 0.1, y: 150 }, 
+            { opacity: 1, scale: 1, y: 0, ease: "power2.out", duration: 0.3 }, 
+            4.7
+        );
     }
   }
 
   private startAnimationLoop = (): void => {
     this.animationFrameId = requestAnimationFrame(this.startAnimationLoop);
     const time = Date.now() * 0.001;
-
     this.camera.lookAt(this.cameraTarget);
 
-    if (!this.isIntroPlaying) {
-        this.camera.position.x += Math.sin(time * 0.5) * 0.005;
-        this.camera.position.y += Math.cos(time * 0.4) * 0.005;
-    }
-    
-    // Adrenaline Plankton Physics
     if (this.particles) {
         const pos = this.particles.geometry.attributes['position'].array as Float32Array;
         const phases = this.particles.geometry.attributes['aPhase'].array as Float32Array;
@@ -270,24 +478,44 @@ export class App implements AfterViewInit, OnDestroy {
             pos[i3 + 1] += 0.08; 
             pos[i3] += Math.sin(time * 1.5 + phases[i]) * 0.03;
             pos[i3 + 2] += Math.cos(time * 1.5 + phases[i]) * 0.03;
-            if (pos[i3 + 1] > 30) pos[i3 + 1] = -30;
+            if (pos[i3 + 1] > 40) pos[i3 + 1] = -40; 
         }
         this.particles.geometry.attributes['position'].needsUpdate = true;
         this.particles.rotation.y = time * 0.12; 
     }
 
-    // Heavy, sunken bobbing for Buddha
-    if (this.artifactModel && this.artifactModel.userData['baseY'] !== undefined) {
-        const data = this.artifactModel.userData;
-        this.artifactModel.position.y = data['baseY'] + Math.sin(time * 0.4 + data['phase']) * 0.8;
+    if (this.bgTextMesh && !this.isIntroPlaying) {
+        this.bgTextMesh.rotation.z = -0.05 + Math.sin(time * 0.5) * 0.05;
+        this.bgTextMesh.rotation.x = -0.1 + Math.sin(time * 0.3) * 0.05;
     }
 
-    // Eerie, floating physics for the Deep Anomaly
+    if (this.artifactModel && this.artifactModel.userData['baseY'] !== undefined) {
+        this.artifactModel.position.y = this.artifactModel.userData['baseY'] + Math.sin(time * 0.4 + this.artifactModel.userData['phase']) * 0.8;
+    }
+
     if (this.artifact2Model && this.artifact2Model.userData['baseY'] !== undefined) {
-        const data = this.artifact2Model.userData;
-        this.artifact2Model.position.y = data['baseY'] + Math.sin(time * 0.7 + data['phase']) * 2.0; 
+        this.artifact2Model.position.y = this.artifact2Model.userData['baseY'] + Math.sin(time * 0.7 + this.artifact2Model.userData['phase']) * 2.0; 
         this.artifact2Model.rotation.z = Math.sin(time * 0.5) * 0.2;
         this.artifact2Model.rotation.y += 0.002; 
+    }
+
+    if (this.artifact3Model && this.artifact3Model.userData['baseY'] !== undefined) {
+        this.artifact3Model.position.y = this.artifact3Model.userData['baseY'] + Math.sin(time * 0.5 + this.artifact3Model.userData['phase']) * 1.2; 
+        this.artifact3Model.rotation.x = 0.2 + Math.sin(time * 0.3) * 0.05; 
+    }
+
+    if (this.artifact4Model && this.artifact4Model.userData['baseY'] !== undefined) {
+        this.artifact4Model.rotation.z = Math.sin(time * 0.2) * 0.05; 
+    }
+
+    if (this.artifact5Model && this.artifact5Model.userData['baseY'] !== undefined) {
+        this.artifact5Model.position.y = this.artifact5Model.userData['baseY'] + Math.sin(time * 0.3 + this.artifact5Model.userData['phase']) * 0.5; 
+    }
+
+    if (this.godRays && this.godRays.length > 0) {
+        this.godRays.forEach((ray, i) => {
+            ray.intensity = 400 + Math.sin(time * 1.5 + (i * 2.2)) * 200;
+        });
     }
 
     this.composer.render();
