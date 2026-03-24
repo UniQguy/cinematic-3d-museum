@@ -4,7 +4,7 @@
 [![Three.js](https://img.shields.io/badge/Three.js-000000?style=for-the-badge&logo=threedotjs&logoColor=white)](https://threejs.org/)
 [![GSAP](https://img.shields.io/badge/GSAP-88CE02?style=for-the-badge&logo=greensock&logoColor=white)](https://greensock.com/)
 
-**Live Demo:** [Insert Netlify Link Here]
+**Live Demo:** [https://ornate-tartufo-94d9bd.netlify.app/]
 
 An award-winning style, interactive 3D web experience that takes users on a cinematic descent into an oceanic trench to discover lost relics. The journey seamlessly transitions into an interactive, isometric 3D museum gallery.
 
@@ -36,5 +36,4 @@ To run this project locally, ensure you have [Node.js](https://nodejs.org/) and 
 
 1. **Clone the repository:**
    ```bash
-   git clone [https://github.com/your-username/cinematic-strawberry.git](https://github.com/your-username/cinematic-strawberry.git)
-   cd cinematic-strawberry
+   git clone [https://github.com/UniQguy/cinematic-3d-museum.git](https://github.com/UniQguy/cinematic-3d-museum.git)
